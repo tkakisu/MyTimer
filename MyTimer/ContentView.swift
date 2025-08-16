@@ -8,68 +8,124 @@
 import SwiftUI
 
 struct ContentView: View {
-    // タイマー
-    @State var timerHandler: Timer?
-    // カウント（経過時間）
-    @State var count = 0
-    // 永続化する秒数設定（初期値は10）
-    @AppStorage("timer_value") var timerValue = 10
-    // アラート表示有無
-    @State var showAlert = false
+    @StateObject private var viewModel = TimerViewModel()
     
     var body: some View {
         NavigationStack {
             ZStack {
-                // 背景画像
-                Image(.backgroundTimer)
-                    .resizable()
-                    .ignoresSafeArea()
-                    .scaledToFill()
+                // グラデーション背景
+                LinearGradient(
+                    colors: [Color.blue.opacity(0.8), Color.purple.opacity(0.6)],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+                .ignoresSafeArea()
                 
-                VStack(spacing: 30.0) {
-                    // テキストを表示する
-                    Text("残り\(timerValue - count)秒")
-                        .font(.largeTitle)
-
-                    HStack {
-                        // スタートボタン
-                        Button {
-                            // ボタンをタップしたときのアクション
-                            startTimer()
-                        } label: {
-                            Text("スタート")
-                                .font(.title)
-                                .foregroundStyle(Color.white)
-                                .frame(width: 140, height: 140)
-                                .background(Color.start)
-                                .clipShape(Circle())
+                VStack(spacing: 50) {
+                    Spacer()
+                    
+                    // プログレスリング付きタイマー表示
+                    ZStack {
+                        // 背景の円
+                        Circle()
+                            .stroke(Color.white.opacity(0.3), lineWidth: 8)
+                            .frame(width: 250, height: 250)
+                        
+                        // プログレスリング
+                        Circle()
+                            .trim(from: 0, to: viewModel.progress)
+                            .stroke(
+                                LinearGradient(
+                                    colors: [Color.orange, Color.red],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                ),
+                                style: StrokeStyle(lineWidth: 8, lineCap: .round)
+                            )
+                            .frame(width: 250, height: 250)
+                            .rotationEffect(.degrees(-90))
+                            .animation(.easeInOut(duration: 1), value: viewModel.progress)
+                        
+                        // 中央のタイマー表示
+                        VStack(spacing: 8) {
+                            Text("\(viewModel.remainingTime)")
+                                .font(.system(size: 60, weight: .bold, design: .rounded))
+                                .foregroundStyle(.white)
+                                .contentTransition(.numericText(value: Double(viewModel.remainingTime)))
+                                .animation(.easeInOut(duration: 0.3), value: viewModel.remainingTime)
+                            
+                            Text("秒")
+                                .font(.title2)
+                                .foregroundStyle(.white.opacity(0.8))
                         }
+                    }
+                    
+                    Spacer()
+                    
+                    // ボタンエリア
+                    HStack(spacing: 40) {
+                        // スタート・一時停止ボタン
+                        Button {
+                            withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
+                                viewModel.startTimer()
+                            }
+                        } label: {
+                            ZStack {
+                                Circle()
+                                    .fill(
+                                        LinearGradient(
+                                            colors: [Color.green, Color.green.opacity(0.7)],
+                                            startPoint: .topLeading,
+                                            endPoint: .bottomTrailing
+                                        )
+                                    )
+                                    .frame(width: 120, height: 120)
+                                    .shadow(color: .black.opacity(0.3), radius: 8, x: 0, y: 4)
+                                
+                                Image(systemName: viewModel.isTimerRunning ? "pause.fill" : "play.fill")
+                                    .font(.system(size: 40, weight: .bold))
+                                    .foregroundStyle(.white)
+                            }
+                        }
+                        .scaleEffect(viewModel.isTimerRunning ? 1.1 : 1.0)
+                        .animation(.easeInOut(duration: 0.2), value: viewModel.isTimerRunning)
+                        .disabled(viewModel.remainingTime == 0 && !viewModel.isTimerRunning && viewModel.count == 0)
                         
                         // ストップボタン
                         Button {
-                            // ボタンをタップしたときのアクション
-                            // timerHandlerをアンラップ
-                            if let timerHandler {
-                                // もしタイマーが実行中だったら停止
-                                if timerHandler.isValid {
-                                    timerHandler.invalidate()
-                                }
+                            withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
+                                viewModel.stopTimer()
                             }
                         } label: {
-                            Text("ストップ")
-                                .font(.title)
-                                .foregroundStyle(Color.white)
-                                .frame(width: 140, height: 140)
-                                .background(Color.stop)
-                                .clipShape(Circle())
+                            ZStack {
+                                Circle()
+                                    .fill(
+                                        LinearGradient(
+                                            colors: [Color.red, Color.red.opacity(0.7)],
+                                            startPoint: .topLeading,
+                                            endPoint: .bottomTrailing
+                                        )
+                                    )
+                                    .frame(width: 120, height: 120)
+                                    .shadow(color: .black.opacity(0.3), radius: 8, x: 0, y: 4)
+                                
+                                Image(systemName: "stop.fill")
+                                    .font(.system(size: 40, weight: .bold))
+                                    .foregroundStyle(.white)
+                            }
                         }
+                        .opacity((viewModel.isTimerRunning || viewModel.count > 0) ? 1.0 : 0.6)
+                        .animation(.easeInOut(duration: 0.2), value: viewModel.isTimerRunning)
                     }
+                    
+                    Spacer()
                 }
+                .padding()
             }
             // 画面が表示されるときに実行される
             .onAppear {
                 // 経過時間を初期化
-                count = 0
+                viewModel.resetOnAppear()
             }
             // ナビゲーションにボタンを追加
             .toolbar {
@@ -78,55 +134,27 @@ struct ContentView: View {
                     NavigationLink {
                         SettingView()
                     } label: {
-                        // テキストを表示
-                        Text("秒数設定")
+                        ZStack {
+                            Circle()
+                                .fill(.white.opacity(0.2))
+                                .frame(width: 40, height: 40)
+                            
+                            Image(systemName: "gear")
+                                .font(.title2)
+                                .foregroundStyle(.white)
+                        }
                     }
                 }
             }
             // 状態変数showAlertがtrueになったときに実行される
-            .alert("終了", isPresented: $showAlert) {
+            .alert("タイマー終了", isPresented: $viewModel.showAlert) {
                 Button("OK") {
                     // OKをタップしたときにここが実行される
-                    print("OKタップされました")
+                    viewModel.resetCount()
                 }
             } message: {
-                Text("タイマー終了時間です")
+                Text("設定時間が経過しました")
             }
-        }
-    }
-    
-    // 1秒ごとに実行されてカウントダウンする
-    func countDownTimer() {
-        // 経過時間に+1指定していく
-        count += 1
-        
-        // 残り時間が0以下のとき、タイマーを止める
-        if timerValue - count <= 0 {
-            timerHandler?.invalidate()
-            
-            // アラートを表示する
-            showAlert = true
-        }
-    }
-    
-    // タイマーをカウントダウン開始する関数
-    func startTimer() {
-        // timerHandlerをアンラップ
-        if let timerHandler {
-            // もしタイマーが実行中ならスタートしない
-            if timerHandler.isValid {
-                return
-            }
-        }
-        
-        // 残り時間が0以下のとき、経過時間を0に初期化する
-        if timerValue - count <= 0 {
-            count = 0
-        }
-        
-        // タイマーをスタート
-        timerHandler = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { _ in
-            countDownTimer()
         }
     }
 }
