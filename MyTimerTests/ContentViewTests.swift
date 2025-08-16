@@ -61,11 +61,13 @@ final class TimerViewModelTests: XCTestCase {
     }
     
     @MainActor
-    func testResetOnAppear() {
-        // resetOnAppearのテスト
+    func testResetCount() {
+        // resetCountのテスト
         viewModel.count = 5
-        viewModel.resetOnAppear()
-        XCTAssertEqual(viewModel.count, 0, "resetOnAppear後はカウントが0になるべき")
+        viewModel.isPaused = true
+        viewModel.resetCount()
+        XCTAssertEqual(viewModel.count, 0, "resetCount後はカウントが0になるべき")
+        XCTAssertFalse(viewModel.isPaused, "resetCount後は一時停止状態が解除されるべき")
     }
     
     @MainActor
@@ -84,6 +86,8 @@ final class TimerViewModelTests: XCTestCase {
         viewModel.pauseTimer()
         XCTAssertEqual(viewModel.count, 3, "pauseTimer後はカウントが保持されるべき")
         XCTAssertFalse(viewModel.isTimerRunning, "pauseTimer後はタイマーが停止しているべき")
+        XCTAssertTrue(viewModel.isPaused, "pauseTimer後は一時停止状態になるべき")
+        XCTAssertTrue(viewModel.shouldShowPlayIcon, "pauseTimer後はplayアイコンを表示するべき")
     }
     
     @MainActor

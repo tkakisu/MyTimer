@@ -42,6 +42,8 @@ class TimerViewModel: ObservableObject {
             count = 0
         }
         
+        isPaused = false
+        
         // タイマーを開始
         timerHandler = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { _ in
             Task { @MainActor in
@@ -55,6 +57,7 @@ class TimerViewModel: ObservableObject {
         if let timerHandler = timerHandler, timerHandler.isValid {
             timerHandler.invalidate()
         }
+        isPaused = true
     }
     
     func stopTimer() {
@@ -63,14 +66,16 @@ class TimerViewModel: ObservableObject {
             timerHandler.invalidate()
         }
         count = 0
-    }
-    
-    func resetOnAppear() {
-        count = 0
+        isPaused = false
     }
     
     func resetCount() {
         count = 0
+        isPaused = false
+    }
+    
+    var shouldShowPlayIcon: Bool {
+        !isTimerRunning
     }
     
     private func countDownTimer() {

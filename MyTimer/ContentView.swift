@@ -82,7 +82,7 @@ struct ContentView: View {
                                     .frame(width: 120, height: 120)
                                     .shadow(color: .black.opacity(0.3), radius: 8, x: 0, y: 4)
                                 
-                                Image(systemName: viewModel.isTimerRunning ? "pause.fill" : "play.fill")
+                                Image(systemName: viewModel.shouldShowPlayIcon ? "play.fill" : "pause.fill")
                                     .font(.system(size: 40, weight: .bold))
                                     .foregroundStyle(.white)
                             }
@@ -125,7 +125,7 @@ struct ContentView: View {
             // 画面が表示されるときに実行される
             .onAppear {
                 // 経過時間を初期化
-                viewModel.resetOnAppear()
+                viewModel.resetCount()
             }
             // ナビゲーションにボタンを追加
             .toolbar {
