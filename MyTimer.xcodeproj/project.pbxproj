@@ -86,11 +86,12 @@
 				};
 			};
 			buildConfigurationList = F6ECE9AE2E50A2F9008A3ED1 /* Build configuration list for PBXProject "MyTimer" */;
-			developmentRegion = en;
+			developmentRegion = ja;
 			hasScannedForEncodings = 0;
 			knownRegions = (
 				en,
 				Base,
+				ja,
 			);
 			mainGroup = F6ECE9AA2E50A2F9008A3ED1;
 			minimizedProjectReferenceProxies = 1;
